@@ -1,0 +1,35 @@
+# Stage 2 All-Shuffle (baseline-style cross-slide batching)
+# Same model + loss as stage2_contrastive, but DataLoader shuffles spots across slides
+# instead of using SlideBatchSampler. Used as the comparison baseline.
+
+# data
+fold: 0   # overridden by 6-fold loop in script
+
+# Stage 1 checkpoint base dirs (script appends /fold{i}/best.pt)
+spot_ckpt_dir: runs/stage1_spot
+image_ckpt_dir: runs/stage1_image
+
+# Encoder architecture (must match Stage 1 training)
+spot_in_dim: 785
+image_in_dim: 1280
+enc_depth: 2
+dec_depth: 2          # decoder unused in Stage 2 but needed to construct MaskedEncoder
+num_heads: 8
+dim_head: 64
+mask_ratio: 0.5       # unused in Stage 2 forward, kept for MaskedEncoder constructor compatibility
+encoder_name: virchow2   # densenet121 | resnet50 | virchow2
+
+# Stage 2 specific
+projection_dim: 256
+temperature: 1.0
+
+# training
+batch_size: 128       # spots per batch (cross-slide random shuffle, baseline-style)
+epochs: 30
+lr: 1.0e-4
+weight_decay: 1.0e-3
+seed: 42
+
+# IO
+save_dir: runs/all_shuffle   # script appends /fold{i}
+log_every: 1
