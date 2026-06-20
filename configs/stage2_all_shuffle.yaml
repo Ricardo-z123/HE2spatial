@@ -1,0 +1,31 @@
+# Stage 2 All-Shuffle
+# normalized-CLIP + lr 1e-3 (E02) + deeper & wider ProjectionHead.
+# Stage 2 only: loads the frozen Stage 1 encoders from runs/stage1_*_window and trains
+# the two ProjectionHeads.
+fold: 0
+spot_ckpt_dir: runs/stage1_spot_window
+image_ckpt_dir: runs/stage1_image_window
+
+spot_dim: 785
+image_dim: 1280
+enc_depth: 4
+dec_depth: 2
+num_heads: 8
+dim_head: 64
+mask_ratio: 0.1
+encoder_name: virchow2
+
+projection_dim: 256
+proj_hidden_dim: 1024      # wider head (was 256)
+proj_extra_layers: 1       # one extra hidden layer 
+normalize_clip: true
+soft_labels: false
+
+batch_size: 64
+epochs: 10
+lr: 1.0e-3
+weight_decay: 1.0e-3
+seed: 42
+
+save_dir: runs/all_shuffle
+log_every: 1
