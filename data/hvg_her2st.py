@@ -116,8 +116,15 @@ filtered_mtx = her2_pool_gene_list(adata_list)  # [[785, spots], [785, spots], .
 preprocessed_mtx = []
 for i, mtx in enumerate(filtered_mtx):  # 6 slide，each [785, spots]. each slide raw count, filtered to 785 HVGs.
     # library_size_normalize scales each ROW to equal total; row=gene here -> normalizes per GENE, not per spot (orientation quirk)
-    log_transformed_expression = scp.transform.log(scp.normalize.library_size_normalize(mtx))  # [785, spots] lib-norm then log
+    # log_transformed_expression = scp.transform.log(scp.normalize.library_size_normalize(mtx))  # [785, spots] lib-norm then log
+
+    ## 归一化方向修改：# per-spot 归一化:先转成 [spots, genes] 让 scprep 按 spot(行)归一,再转回 [785, spots] 存盘
+    mtx_spot = mtx.T 
+    normed   = scp.transform.log(scp.normalize.library_size_normalize(mtx_spot)) 
+    log_transformed_expression = normed.T 
+
     preprocessed_mtx.append(log_transformed_expression)
+
     pathset = f"/root/autodl-tmp/HER2ST-MLM/data/preprocessed_expression_matrices/her2st/{names[i]}"
     if not os.path.exists(pathset):
         os.makedirs(pathset)
