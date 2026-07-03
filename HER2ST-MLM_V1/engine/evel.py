@@ -100,6 +100,7 @@ def main():
     gene_list = list(np.load('./data/her_hvg_cut_1000.npy', allow_pickle=True))  # 785 gene list.
 
     heg_pcc_list, hvg_pcc_list, mse_list, mae_list = [], [], [], []
+    all_gene_pcc = []  # 每折的全 785-gene PCC(NaN→0),用于跨折统计 top-20 易预测基因
 
     # ===== for fold in range(6): evaluate each fold (leave-one-slide-out) =====
     #   1. load this fold's trained model            (fold{fold}/best.pt)
@@ -196,6 +197,7 @@ def main():
         top50_names = adata_true.var_names[np.argsort(gene_mean)[::-1][:50]]  # names of the 50 highest-expressed genes (HEG set)
         heg_pcc, _ = get_R(adata_pred[:, top50_names], adata_true[:, top50_names])  # [50] per-gene Pearson r on HEG genes
         hvg_pcc, _ = get_R(adata_pred, adata_true)                         # [785] per-gene Pearson r on all genes
+        all_gene_pcc.append(np.nan_to_num(hvg_pcc, nan=0.0))              # 存全 785(NaN→0),供跨折 top-20 基因统计
         hvg_pcc = hvg_pcc[~np.isnan(hvg_pcc)]                              # drop NaN (gene constant on test slide -> r undefined)
 
         mse = mean_squared_error(true, pred)       # scalar, over all spots x 785 genes
@@ -215,6 +217,16 @@ def main():
     print(f"avg HVG PCC: {np.mean(hvg_pcc_list):.4f}")
     print(f"avg MSE:     {np.mean(mse_list):.4f}")
     print(f"avg MAE:     {np.mean(mae_list):.4f}")
+
+    # ===== top-20 易预测基因:按跨 6 折平均的 per-gene PCC 排序 =====
+    mean_gene_pcc = np.mean(np.array(all_gene_pcc), axis=0)   # [785] 每个基因 6 折平均 PCC(与 gene_list 对齐)
+    top20_idx = np.argsort(mean_gene_pcc)[::-1][:20]          # PCC 最高的 20 个基因
+    print(f"\n{'=' * 60}")
+    print("Top 20 genes by average PCC (6-fold mean):")
+    print(f"{'=' * 60}")
+    print(f"{'Rank':<6}{'Gene':<18}{'Avg PCC':<10}")
+    for rank, i in enumerate(top20_idx, 1):
+        print(f"{rank:<6}{str(gene_list[i]):<18}{mean_gene_pcc[i]:.4f}")
 
 
 if __name__ == "__main__":
