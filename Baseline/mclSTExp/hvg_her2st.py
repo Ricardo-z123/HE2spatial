@@ -115,7 +115,7 @@ filtered_mtx = her2_pool_gene_list(adata_list)
 
 preprocessed_mtx = []
 for i, mtx in enumerate(filtered_mtx):
-    
+
     ## 归一化方向错误
     # log_transformed_expression = scp.transform.log(scp.normalize.library_size_normalize(mtx))
     ## 归一化方向修改：# per-spot 归一化:先转成 [spots, genes] 让 scprep 按 spot(行)归一,再转回 [785, spots] 存盘
