@@ -1,0 +1,56 @@
+# Stage 2 Window-mode : attention within KNN windows, contrastive loss pools across windows.
+# Loads the frozen Stage 1 encoders from runs/stage1_*_window; only the two ProjectionHeads train.
+# The architecture block below must stay in sync with stage1_*.yaml so evel.py's ContrastiveModel
+# can load these ckpts as-is (same spot_dim / image_dim / depths / heads).
+fold: 0
+spot_ckpt_dir: runs/stage1_spot_window
+image_ckpt_dir: runs/stage1_image_window
+
+spot_dim: 785
+image_dim: 2560
+enc_depth: 4
+dec_depth: 2
+num_heads: 8
+dim_head: 64
+mask_ratio: 0.5   # In stage2, load stage1 frozen encoder, 用不到mask_ratio.
+encoder_name: virchow2        # Virchow2 image encoder.
+image_agg: concat             # cat(CLS, patch-mean) -> image_dim = 2560
+
+projection_dim: 256
+proj_hidden_dim: 512        # 目前实验最好的选择.
+proj_extra_layers: 1
+# ---- contrastive loss switches (3 knobs, 5 valid combinations) ----
+normalize_clip: true     # true = logit_scale * cosine(L2-normalised) | false = raw dot / temperature
+soft_labels: false       # true = BLEEP-style targets from the embeddings' own similarity.
+                         # REQUIRES normalize_clip: false AND duplicate_spot_mode: none (asserted).
+
+# ---- window params (new) ----
+window_size: 10          # M = window_size**2 = 100 spots per window (= Stage1)
+window_stride: 2         # anchor subsampling stride on the grid (= Stage1)
+
+# ---- duplicate-spot label (S1.5) ----
+# Windows overlap, so the flattened [B * M] batch holds the SAME spot at several slots (~19.9% of the
+# 800 slots; one spot can take 5). 'none' = torch.eye (those slots become negatives of each other);
+# 'positive' = all slots of one spot are positives, row-normalised. 
+duplicate_spot_mode: positive      # none | positive
+                                   # ignored when soft_labels: true (must be 'none' there)
+
+# ---- retrieval (eval only; engine/evel.py) ----
+# How the top_k retrieved neighbours' REAL expression becomes the prediction.
+# Overridable at the CLI with --weight_mode; --top_k sets how many are retrieved.
+#   simple          BLEEP: nearest neighbour only (top_k ignored, rank 0 consumed)
+#   average         BLEEP: unweighted mean over top_k                       (BLEEP uses top_k=50)
+#   bleep_weighted  BLEEP: w = exp(-(sqL2 - min_sqL2 + 1)) on RAW embeddings (BLEEP uses top_k=50)
+#   mcl_weighted    mclSTExp: w ∝ 1 / L1^2 on RAW embeddings                (default)
+retrieval_method: mcl_weighted
+
+batch_size: 8            # number of WINDOWS per batch (8*100 = 800 spots -> [800,800] contrastive matrix)
+epochs: 10
+lr: 1.0e-3
+weight_decay: 1.0e-3
+seed: 42
+
+save_dir: runs/window
+log_every: 1
+num_workers: 0
+temperature: 1.0

@@ -1,0 +1,34 @@
+# Stage 1 image branch MLM pretrain config
+branch: image
+encoder_name: virchow2     # Virchow2 image encoder
+image_agg: concat          # patch_mean | class_token | concat; 必须与 stage2 一致; concat 时把下面 dim 改成 2560
+
+# data
+fold: 0
+use_windows: true
+window_size: 10
+window_stride: 2
+window_min_spots: 20
+
+# model
+dim: 2560   # 必须匹配 image_agg: patch_mean/class_token=1280, concat=2560
+            # (其它 backbone: densenet121=1024, resnet50=2048)
+enc_depth: 4
+dec_depth: 2
+num_heads: 8
+dim_head: 64
+mask_ratio: 0.5
+
+# optimizer
+lr: 1.0e-4
+weight_decay: 1.0e-3
+
+# training
+epochs: 10
+batch_size: 8    # 8 windows (= Stage2); 402 windows -> 51 steps/epoch
+seed: 42
+
+# IO
+save_dir: runs/stage1_image_window
+log_every: 1
+num_workers: 0
